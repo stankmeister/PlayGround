@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#080416" />
+  <meta name="description" content="Mob Surge — an endless 3D mob control runner. Grow your squad through multiplier gates, dodge hazards, crush rival mobs, and upgrade your base." />
+  <title>Mob Surge — Endless 3D Mob Control</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas" aria-label="Mob Surge game world"></canvas>
+
+  <!-- ===================== HUD ===================== -->
+  <div id="hud" class="hud is-hidden" aria-hidden="true">
+    <div class="hud-top">
+      <div class="hud-side hud-left">
+        <div class="stat-pill crowd-pill">
+          <span class="pill-icon" data-icon="crowd"></span>
+          <span class="pill-value"><span id="crowd-count">12</span><span class="pill-unit">MOB</span></span>
+          <span class="count-pop" id="count-pop"></span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="run-line">
+          <span><b id="distance">0</b> m</span>
+          <span class="run-divider"></span>
+          <span>SECTOR <b id="sector">1</b></span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="progress-fill"></div>
+          <div class="progress-marker" id="progress-marker"></div>
+        </div>
+        <div class="run-hint" id="run-hint">NEXT UPGRADE IN 300 m</div>
+      </div>
+
+      <div class="hud-side hud-right">
+        <div class="stat-pill coin-pill">
+          <span class="coin-glyph"></span>
+          <span id="coin-count">0</span>
+        </div>
+        <button class="icon-btn" id="btn-sound" aria-label="Mute sound" title="Sound">
+          <span data-icon="sound"></span>
+        </button>
+        <button class="icon-btn" id="btn-pause" aria-label="Pause" title="Pause (P)">
+          <span data-icon="pause"></span>
+        </button>
+      </div>
+    </div>
+
+    <div id="powerup-bar" class="powerup-bar"></div>
+
+    <div id="boss-hud" class="boss-hud is-hidden" data-phase="1">
+      <div class="boss-top">
+        <span class="boss-tag"><span class="boss-dot"></span> BOSS</span>
+        <span class="boss-name" id="boss-name">THE WARDEN</span>
+        <span class="boss-phase" id="boss-phase">PHASE 1</span>
+      </div>
+      <div class="boss-track"><div class="boss-fill" id="boss-fill"></div></div>
+      <div class="boss-bottom">
+        <span id="boss-hp">100%</span>
+        <span class="boss-tip">DODGE THE SLAM RINGS</span>
+      </div>
+    </div>
+
+    <div id="battle-hud" class="battle-hud is-hidden">
+      <div class="battle-label">MOB CLASH</div>
+      <div class="battle-bar">
+        <div class="battle-player" id="battle-player"></div>
+        <div class="battle-enemy" id="battle-enemy"></div>
+      </div>
+      <div class="battle-counts"><span id="battle-p">0</span><span class="battle-vs">VS</span><span id="battle-e">0</span></div>
+    </div>
+
+    <div class="steer-hint" id="steer-hint">
+      <span class="steer-hand">✥</span> DRAG TO STEER
+    </div>
+  </div>
+
+  <div class="screen-flash" id="flash"></div>
+
+  <div id="boss-warning" class="boss-warning is-hidden" aria-hidden="true">
+    <span class="bw-kicker"><i></i> WARNING <i></i></span>
+    <strong id="boss-warning-name">THE WARDEN</strong>
+    <span class="bw-sub">BOSS INCOMING</span>
+  </div>
+
+  <!-- ===================== START SCREEN ===================== -->
+  <section id="screen-start" class="screen start-screen" aria-label="Start screen">
+    <div class="start-inner">
+      <div class="badge-row">
+        <span class="live-dot"></span>
+        <span>ENDLESS 3D MOB CONTROL</span>
+      </div>
+
+      <div class="logo-wrap">
+        <h1 class="logo"><span class="logo-mob">MOB</span><span class="logo-surge">SURGE</span></h1>
+        <div class="logo-underline"></div>
+      </div>
+
+      <p class="tagline">Grow the mob. Smash the gates. Never stop.</p>
+
+      <div class="start-stats">
+        <div class="start-stat"><span class="ss-label">BEST</span><b><span id="start-best">0</span> m</b></div>
+        <div class="start-stat"><span class="ss-label">COINS</span><b class="gold"><span data-coins>0</span></b></div>
+        <div class="start-stat"><span class="ss-label">RUNS</span><b id="start-runs">0</b></div>
+        <div class="start-stat"><span class="ss-label">BOSSES</span><b id="start-bosses">0</b></div>
+      </div>
+
+      <button id="btn-play" class="btn btn-primary btn-play" aria-label="Play">
+        <span class="btn-shine"></span>
+        <span>PLAY</span>
+        <span data-icon="arrow"></span>
+      </button>
+
+      <div class="start-actions">
+        <button id="btn-upgrades-start" class="btn btn-ghost">
+          <span data-icon="upgrade"></span> UPGRADES
+        </button>
+        <button id="btn-howto" class="btn btn-ghost">
+          <span data-icon="help"></span> HOW TO PLAY
+        </button>
+      </div>
+    </div>
+    <div class="start-footer">MOB SURGE · v1.0 · Built with Three.js</div>
+  </section>
+
+  <!-- ===================== HOW TO PLAY ===================== -->
+  <div id="modal-howto" class="overlay is-hidden">
+    <div class="panel howto-panel">
+      <button class="close-btn" data-close="modal-howto" aria-label="Close">✕</button>
+      <p class="eyebrow">FIELD MANUAL</p>
+      <h2>How to Play</h2>
+      <div class="howto-grid">
+        <div class="howto-item"><span class="howto-num">01</span><div><h3>Steer the mob</h3><p>Drag anywhere on the screen, use your mouse, or press A / D. Your squad runs forward automatically.</p></div></div>
+        <div class="howto-item"><span class="howto-num">02</span><div><h3>Pick a gate</h3><p>Every gate splits into two holograms. Line up with the bigger multiplier or the better addition. Red gates will shrink your mob.</p></div></div>
+        <div class="howto-item"><span class="howto-num">03</span><div><h3>Dodge &amp; fight</h3><p>Saws and laser walls thin the herd. Rival mobs must be crushed head-on. Every few hundred metres a titan boss blocks the track — dodge its telegraphed slam rings and burn it down.</p></div></div>
+        <div class="howto-item"><span class="howto-num">04</span><div><h3>Upgrade forever</h3><p>Coins are permanent. Between runs, spend them on squad size, battle strength, magnets, power-up duration and bounty.</p></div></div>
+      </div>
+      <button class="btn btn-primary" id="btn-howto-close">GOT IT</button>
+    </div>
+  </div>
+
+  <!-- ===================== PAUSE ===================== -->
+  <div id="screen-pause" class="overlay is-hidden">
+    <div class="panel pause-panel">
+      <p class="eyebrow">TAKE A BREATH</p>
+      <h2>Paused</h2>
+      <div class="pause-stats">
+        <div><span>DISTANCE</span><b id="pause-distance">0 m</b></div>
+        <div><span>MOB</span><b id="pause-mob">0</b></div>
+      </div>
+      <button class="btn btn-primary" id="btn-resume">RESUME</button>
+      <div class="pause-row">
+        <button class="btn btn-ghost" id="btn-restart-pause">RESTART</button>
+        <button class="btn btn-ghost" id="btn-home-pause">BASE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PERK CHOICE ===================== -->
+  <div id="screen-perk" class="overlay is-hidden">
+    <div class="panel perk-panel">
+      <p class="eyebrow">SECTOR <span id="perk-sector">1</span> CLEARED</p>
+      <h2>Choose a Run Upgrade</h2>
+      <p class="panel-sub">These last until your squad is wiped.</p>
+      <div class="perk-grid" id="perk-grid"></div>
+    </div>
+  </div>
+
+  <!-- ===================== GAME OVER ===================== -->
+  <div id="screen-over" class="overlay is-hidden">
+    <div class="panel over-panel">
+      <p class="eyebrow" id="over-eyebrow">RUN COMPLETE</p>
+      <h2 class="over-title" id="over-title">SQUAD WIPED</h2>
+      <div class="new-best is-hidden" id="new-best">★ NEW PERSONAL BEST ★</div>
+
+      <div class="result-grid">
+        <div class="result"><span>DISTANCE</span><b><span id="over-distance">0</span><small>m</small></b></div>
+        <div class="result"><span>BEST</span><b><span id="over-best">0</span><small>m</small></b></div>
+        <div class="result"><span>PEAK MOB</span><b id="over-peak">0</b></div>
+        <div class="result"><span>CRUSHED</span><b id="over-kills">0</b></div>
+      </div>
+
+      <div class="coin-earn">
+        <span class="coin-glyph big"></span>
+        <span class="coin-earn-value">+<span id="over-coins">0</span></span>
+        <span class="coin-earn-label">COINS EARNED</span>
+      </div>
+
+      <button class="btn btn-revive" id="btn-revive">
+        <span data-icon="heart"></span>
+        <span>SECOND WIND</span>
+        <span class="revive-cost" id="revive-cost">50</span>
+      </button>
+      <p class="revive-note" id="revive-note">Continue with 35% of your peak mob and a shield.</p>
+
+      <button class="btn btn-primary" id="btn-again">RUN AGAIN</button>
+      <div class="over-row">
+        <button class="btn btn-ghost" id="btn-upgrades-over"><span data-icon="upgrade"></span> UPGRADES</button>
+        <button class="btn btn-ghost" id="btn-home">BASE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== UPGRADES ===================== -->
+  <div id="modal-upgrades" class="overlay is-hidden">
+    <div class="panel upgrade-panel">
+      <button class="close-btn" data-close="modal-upgrades" aria-label="Close">✕</button>
+      <header class="upgrade-head">
+        <div>
+          <p class="eyebrow">PERMANENT</p>
+          <h2>Base Upgrades</h2>
+        </div>
+        <div class="wallet"><span class="coin-glyph"></span><b data-coins>0</b></div>
+      </header>
+      <p class="panel-sub">Upgrades persist across every run. Spend wisely, commander.</p>
+      <div class="upgrade-list" id="upgrade-list"></div>
+      <button class="btn btn-primary" id="btn-upgrades-close">CLOSE</button>
+    </div>
+  </div>
+
+  <div id="toast-layer" class="toast-layer"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
